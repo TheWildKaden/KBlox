@@ -6,6 +6,9 @@
   window.__KBloxUniversalLoaded = true;
 
   const VERSION = "2026.04.08";
+  const SESSION_ID =
+    (typeof window.nanoid === "function" ? window.nanoid(6) : null) ||
+    Math.random().toString(36).slice(2, 8);
 
   // -----------------------------
   // KBloxLib (small DOM utilities)
