@@ -1,11 +1,11 @@
-;(() => {
-  'use strict';
+(() => {
+  "use strict";
 
   // Prevent double-injection if the loader runs more than once.
-  if (window.__KBloxMainLoaded) return;
-  window.__KBloxMainLoaded = true;
+  if (window.__KBloxUniversalLoaded) return;
+  window.__KBloxUniversalLoaded = true;
 
-  const VERSION = '2026.04.08';
+  const VERSION = "2026.04.08";
 
   // -----------------------------
   // KBloxLib (small DOM utilities)
@@ -19,14 +19,18 @@
     const waitForElement = (selector, options = {}) => {
       const root = options.root || document;
       const interval = options.interval || 120;
-      const timeout = typeof options.timeout === 'number' ? options.timeout : 8000;
+      const timeout =
+        typeof options.timeout === "number" ? options.timeout : 8000;
 
       return new Promise((resolve, reject) => {
         let elapsed = 0;
         const tryFind = () => {
           const found = root.querySelector(selector);
           if (found) return resolve(found);
-          if (elapsed >= timeout) return reject(new Error(`Timeout waiting for selector: ${selector}`));
+          if (elapsed >= timeout)
+            return reject(
+              new Error(`Timeout waiting for selector: ${selector}`),
+            );
           elapsed += interval;
           setTimeout(tryFind, interval);
         };
@@ -36,10 +40,10 @@
 
     const addStyles = (css, id) => {
       if (!css) return null;
-      const styleId = id || 'kbloxlib-styles';
+      const styleId = id || "kbloxlib-styles";
       let style = document.getElementById(styleId);
       if (style) return style;
-      style = document.createElement('style');
+      style = document.createElement("style");
       style.id = styleId;
       style.textContent = css;
       document.head.appendChild(style);
@@ -47,35 +51,42 @@
     };
 
     const createPanel = (id, options = {}) => {
-      const panelId = id || 'kblox-panel';
+      const panelId = id || "kblox-panel";
       let container = document.getElementById(panelId);
       if (container) return container;
 
-      container = document.createElement('div');
+      container = document.createElement("div");
       container.id = panelId;
-      container.className = options.className || 'kblox-panel';
-      container.setAttribute('role', 'dialog');
-      container.setAttribute('aria-label', options.ariaLabel || 'KBlox panel');
-      container.innerHTML = options.innerHTML || '';
+      container.className = options.className || "kblox-panel";
+      container.setAttribute("role", "dialog");
+      container.setAttribute("aria-label", options.ariaLabel || "KBlox panel");
+      container.innerHTML = options.innerHTML || "";
 
       (options.parent || document.body).appendChild(container);
-      if (typeof options.afterCreate === 'function') options.afterCreate(container);
+      if (typeof options.afterCreate === "function")
+        options.afterCreate(container);
       return container;
     };
 
     const openWindow = (path, opts = {}) => {
       const base = opts.base || window.location.origin;
-      const target = opts.target || '_blank';
+      const target = opts.target || "_blank";
       const width = opts.width || 1200;
       const height = opts.height || 900;
-      const left = typeof opts.left === 'number' ? opts.left : Math.round((screen.width - width) / 2);
-      const top = typeof opts.top === 'number' ? opts.top : Math.round((screen.height - height) / 2);
+      const left =
+        typeof opts.left === "number"
+          ? opts.left
+          : Math.round((screen.width - width) / 2);
+      const top =
+        typeof opts.top === "number"
+          ? opts.top
+          : Math.round((screen.height - height) / 2);
       const features = `width=${width},height=${height},left=${left},top=${top}`;
       window.open(`${base}${path}`, target, features);
     };
 
     const onPageChange = (callback) => {
-      if (typeof callback !== 'function') return () => {};
+      if (typeof callback !== "function") return () => {};
 
       let currentHref = window.location.href;
       const notify = () => {
@@ -104,14 +115,14 @@
         // ignore
       }
 
-      window.addEventListener('popstate', notify);
+      window.addEventListener("popstate", notify);
       return () => {
         observer.disconnect();
-        window.removeEventListener('popstate', notify);
+        window.removeEventListener("popstate", notify);
       };
     };
 
-    const log = (...args) => console.log('[KBlox]', ...args);
+    const log = (...args) => console.log("[KBlox]", ...args);
 
     window.KBloxLib = {
       isRoblox: assertRoblox,
@@ -128,18 +139,71 @@
   if (!KBlox || !KBlox.isRoblox()) return;
 
   // -----------------------------
+  // Universal animations (all pages)
+  // -----------------------------
+  const UNIVERSAL_ANIM_CSS = `
+    @media (prefers-reduced-motion: no-preference) {
+      body {
+        animation: kblox-fade-in 180ms ease-out both;
+      }
+
+      /* Keep selectors conservative to avoid breaking layouts. */
+      button,
+      [role="button"],
+      .btn-common,
+      .rbx-btn,
+      a {
+        transition:
+          transform 120ms ease,
+          box-shadow 140ms ease,
+          filter 140ms ease,
+          background-color 140ms ease,
+          border-color 140ms ease,
+          color 140ms ease,
+          opacity 140ms ease;
+      }
+
+      button:hover,
+      [role="button"]:hover,
+      .btn-common:hover,
+      .rbx-btn:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.03);
+      }
+
+      button:active,
+      [role="button"]:active,
+      .btn-common:active,
+      .rbx-btn:active {
+        transform: translateY(0);
+        filter: brightness(0.98);
+      }
+
+      a:hover {
+        filter: brightness(1.05);
+      }
+
+      @keyframes kblox-fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+    }
+  `;
+  KBlox.addStyles(UNIVERSAL_ANIM_CSS, "kblox-universal-anim-css");
+
+  // -----------------------------
   // Tiny "website editor" (CSS)
   // -----------------------------
   const Style = (() => {
     const upsert = (id, css) => {
-      const styleId = id || 'kblox-style';
+      const styleId = id || "kblox-style";
       let el = document.getElementById(styleId);
       if (!el) {
-        el = document.createElement('style');
+        el = document.createElement("style");
         el.id = styleId;
         document.head.appendChild(el);
       }
-      el.textContent = css || '';
+      el.textContent = css || "";
       return el;
     };
 
@@ -152,18 +216,18 @@
   })();
 
   const storage = (() => {
-    const prefix = 'kblox:';
+    const prefix = "kblox:";
     const key = (k) => `${prefix}${k}`;
     const get = (k) => {
       try {
-        return localStorage.getItem(key(k)) || '';
+        return localStorage.getItem(key(k)) || "";
       } catch (_) {
-        return '';
+        return "";
       }
     };
     const set = (k, v) => {
       try {
-        localStorage.setItem(key(k), v || '');
+        localStorage.setItem(key(k), v || "");
       } catch (_) {
         // ignore
       }
@@ -175,18 +239,21 @@
   // Route detection (subpages)
   // -----------------------------
   const getRoute = (url) => {
-    const path = (url && url.pathname) || window.location.pathname || '/';
+    const path = (url && url.pathname) || window.location.pathname || "/";
 
     // Avatar editor pages (legacy + new)
-    if (/^\/(?:my\/avatar|avatar)(?:\/|$)/i.test(path)) return { id: 'avatar', label: 'Avatar Editor' };
+    if (/^\/(?:my\/avatar|avatar)(?:\/|$)/i.test(path))
+      return { id: "avatar", label: "Avatar Editor" };
 
     // Profile view (e.g. /users/123/profile)
-    if (/^\/users\/\d+\/profile(?:\/|$)/i.test(path)) return { id: 'profile', label: 'Profile' };
+    if (/^\/users\/\d+\/profile(?:\/|$)/i.test(path))
+      return { id: "profile", label: "Profile" };
 
     // Home page (logged-in home)
-    if (path === '/' || /^\/home(?:\/|$)/i.test(path)) return { id: 'home', label: 'Home' };
+    if (path === "/" || /^\/home(?:\/|$)/i.test(path))
+      return { id: "home", label: "Home" };
 
-    return { id: 'other', label: 'Other' };
+    return { id: "other", label: "Other" };
   };
 
   // -----------------------------
@@ -285,20 +352,20 @@
       #kblox-panel code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     `;
 
-    KBlox.addStyles(css, 'kblox-ui-css');
+    KBlox.addStyles(css, "kblox-ui-css");
 
-    const fabId = 'kblox-fab';
-    const panelId = 'kblox-panel';
-    const cssTextId = 'kblox-css-text';
-    const routeLabelId = 'kblox-route-label';
+    const fabId = "kblox-fab";
+    const panelId = "kblox-panel";
+    const cssTextId = "kblox-css-text";
+    const routeLabelId = "kblox-route-label";
 
     const ensure = () => {
       let fab = document.getElementById(fabId);
       if (!fab) {
-        fab = document.createElement('button');
+        fab = document.createElement("button");
         fab.id = fabId;
-        fab.type = 'button';
-        fab.textContent = 'KBlox';
+        fab.type = "button";
+        fab.textContent = "KBlox";
         document.body.appendChild(fab);
       }
 
@@ -326,23 +393,25 @@
       });
 
       const toggle = (open) => {
-        const isOpen = panel.classList.contains('kblox-panel--open');
-        const next = typeof open === 'boolean' ? open : !isOpen;
-        panel.classList.toggle('kblox-panel--open', next);
+        const isOpen = panel.classList.contains("kblox-panel--open");
+        const next = typeof open === "boolean" ? open : !isOpen;
+        panel.classList.toggle("kblox-panel--open", next);
       };
 
-      fab.addEventListener('click', () => toggle());
-      panel.querySelector('#kblox-close')?.addEventListener('click', () => toggle(false));
+      fab.addEventListener("click", () => toggle());
+      panel
+        .querySelector("#kblox-close")
+        ?.addEventListener("click", () => toggle(false));
 
-      document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
+      document.addEventListener("keydown", (e) => {
+        if (e.ctrlKey && e.shiftKey && (e.key === "E" || e.key === "e")) {
           e.preventDefault();
           toggle();
         }
       });
 
-      document.addEventListener('click', (e) => {
-        if (!panel.classList.contains('kblox-panel--open')) return;
+      document.addEventListener("click", (e) => {
+        if (!panel.classList.contains("kblox-panel--open")) return;
         if (panel.contains(e.target) || fab.contains(e.target)) return;
         toggle(false);
       });
@@ -355,8 +424,10 @@
           if (el) el.textContent = text;
         },
         getCssTextArea: () => panel.querySelector(`#${cssTextId}`),
-        onApply: (fn) => panel.querySelector('#kblox-apply')?.addEventListener('click', fn),
-        onClear: (fn) => panel.querySelector('#kblox-clear')?.addEventListener('click', fn),
+        onApply: (fn) =>
+          panel.querySelector("#kblox-apply")?.addEventListener("click", fn),
+        onClear: (fn) =>
+          panel.querySelector("#kblox-clear")?.addEventListener("click", fn),
       };
     };
 
@@ -368,7 +439,7 @@
   // -----------------------------
   const Modules = (() => {
     const avatar = {
-      id: 'avatar',
+      id: "avatar",
       mount: () => {
         const css = `
           .kblox-avatar-chip {
@@ -385,22 +456,22 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.35);
           }
         `;
-        Style.upsert('kblox-avatar-css', css);
+        Style.upsert("kblox-avatar-css", css);
 
-        let chip = document.getElementById('kblox-avatar-chip');
+        let chip = document.getElementById("kblox-avatar-chip");
         if (!chip) {
-          chip = document.createElement('button');
-          chip.id = 'kblox-avatar-chip';
-          chip.type = 'button';
-          chip.className = 'kblox-avatar-chip';
-          chip.textContent = 'Avatar shortcuts';
+          chip = document.createElement("button");
+          chip.id = "kblox-avatar-chip";
+          chip.type = "button";
+          chip.className = "kblox-avatar-chip";
+          chip.textContent = "Avatar shortcuts";
           document.body.appendChild(chip);
         }
 
         const actions = [
-          { label: 'New Avatar Editor', path: '/avatar/editor' },
-          { label: 'Legacy Avatar (Outfits)', path: '/my/avatar' },
-          { label: 'Avatar Shop', path: '/catalog/Avatar' },
+          { label: "New Avatar Editor", path: "/avatar/editor" },
+          { label: "Legacy Avatar (Outfits)", path: "/my/avatar" },
+          { label: "Avatar Shop", path: "/catalog/Avatar" },
         ];
 
         const onClick = () => {
@@ -408,18 +479,18 @@
           const next = actions[(Math.random() * actions.length) | 0];
           KBlox.openWindow(next.path);
         };
-        chip.addEventListener('click', onClick);
+        chip.addEventListener("click", onClick);
 
         return () => {
-          chip?.removeEventListener('click', onClick);
+          chip?.removeEventListener("click", onClick);
           chip?.remove();
-          Style.remove('kblox-avatar-css');
+          Style.remove("kblox-avatar-css");
         };
       },
     };
 
     const home = {
-      id: 'home',
+      id: "home",
       mount: () => {
         const css = `
           .kblox-home-badge {
@@ -436,30 +507,30 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.35);
           }
         `;
-        Style.upsert('kblox-home-css', css);
+        Style.upsert("kblox-home-css", css);
 
-        let badge = document.getElementById('kblox-home-badge');
+        let badge = document.getElementById("kblox-home-badge");
         if (!badge) {
-          badge = document.createElement('div');
-          badge.id = 'kblox-home-badge';
-          badge.className = 'kblox-home-badge';
-          badge.textContent = 'KBlox active on Home (Ctrl+Shift+E to edit CSS)';
+          badge = document.createElement("div");
+          badge.id = "kblox-home-badge";
+          badge.className = "kblox-home-badge";
+          badge.textContent = "KBlox active on Home (Ctrl+Shift+E to edit CSS)";
           document.body.appendChild(badge);
           setTimeout(() => badge?.remove(), 4500);
         }
 
         return () => {
           badge?.remove();
-          Style.remove('kblox-home-css');
+          Style.remove("kblox-home-css");
         };
       },
     };
 
     const profile = {
-      id: 'profile',
+      id: "profile",
       mount: () => {
         const m = window.location.pathname.match(/^\/users\/(\d+)\/profile/i);
-        const userId = m ? m[1] : '';
+        const userId = m ? m[1] : "";
 
         const css = `
           .kblox-profile-chip {
@@ -477,41 +548,45 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.35);
           }
         `;
-        Style.upsert('kblox-profile-css', css);
+        Style.upsert("kblox-profile-css", css);
 
-        let chip = document.getElementById('kblox-profile-chip');
+        let chip = document.getElementById("kblox-profile-chip");
         if (!chip) {
-          chip = document.createElement('button');
-          chip.id = 'kblox-profile-chip';
-          chip.type = 'button';
-          chip.className = 'kblox-profile-chip';
-          chip.textContent = userId ? `Copy userId: ${userId}` : 'Copy userId';
+          chip = document.createElement("button");
+          chip.id = "kblox-profile-chip";
+          chip.type = "button";
+          chip.className = "kblox-profile-chip";
+          chip.textContent = userId ? `Copy userId: ${userId}` : "Copy userId";
           document.body.appendChild(chip);
         }
 
         const onClick = async () => {
           try {
-            await navigator.clipboard.writeText(userId || '');
-            chip.textContent = 'Copied!';
+            await navigator.clipboard.writeText(userId || "");
+            chip.textContent = "Copied!";
             setTimeout(() => {
-              chip.textContent = userId ? `Copy userId: ${userId}` : 'Copy userId';
+              chip.textContent = userId
+                ? `Copy userId: ${userId}`
+                : "Copy userId";
             }, 1200);
           } catch (_) {
             // Clipboard may be blocked; just show the value.
-            chip.textContent = userId ? `userId: ${userId}` : 'userId not found';
+            chip.textContent = userId
+              ? `userId: ${userId}`
+              : "userId not found";
           }
         };
-        chip.addEventListener('click', onClick);
+        chip.addEventListener("click", onClick);
 
         return () => {
-          chip?.removeEventListener('click', onClick);
+          chip?.removeEventListener("click", onClick);
           chip?.remove();
-          Style.remove('kblox-profile-css');
+          Style.remove("kblox-profile-css");
         };
       },
     };
 
-    const other = { id: 'other', mount: () => () => {} };
+    const other = { id: "other", mount: () => () => {} };
 
     const byId = { avatar, home, profile, other };
     return { byId };
@@ -525,10 +600,10 @@
   let active = { routeId: null, cleanup: null };
 
   const applyRouteCss = (routeId) => {
-    const globalCss = storage.get('css:global');
+    const globalCss = storage.get("css:global");
     const routeCss = storage.get(`css:${routeId}`);
-    Style.upsert('kblox-css-global', globalCss);
-    Style.upsert('kblox-css-route', routeCss);
+    Style.upsert("kblox-css-global", globalCss);
+    Style.upsert("kblox-css-route", routeCss);
   };
 
   const loadCssToEditor = (routeId) => {
@@ -540,15 +615,15 @@
   ui.onApply(() => {
     const route = getRoute(new URL(window.location.href));
     const textarea = ui.getCssTextArea();
-    storage.set(`css:${route.id}`, textarea ? textarea.value : '');
+    storage.set(`css:${route.id}`, textarea ? textarea.value : "");
     applyRouteCss(route.id);
   });
 
   ui.onClear(() => {
     const route = getRoute(new URL(window.location.href));
     const textarea = ui.getCssTextArea();
-    if (textarea) textarea.value = '';
-    storage.set(`css:${route.id}`, '');
+    if (textarea) textarea.value = "";
+    storage.set(`css:${route.id}`, "");
     applyRouteCss(route.id);
   });
 
@@ -562,9 +637,9 @@
     }
 
     try {
-      if (typeof active.cleanup === 'function') active.cleanup();
+      if (typeof active.cleanup === "function") active.cleanup();
     } catch (e) {
-      KBlox.log('cleanup error', e);
+      KBlox.log("cleanup error", e);
     }
 
     active.routeId = route.id;
