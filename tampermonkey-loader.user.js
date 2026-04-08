@@ -17,7 +17,7 @@
 
   // 1) Host your repo somewhere that serves raw JS (GitHub raw, your own site, etc.)
   // 2) Paste the raw URL to `main.js` here.
-  const MAIN_JS_URL = 'https://example.com/main.js';
+  const MAIN_JS_URL = 'https://raw.githubusercontent.com/TheWildKaden/KBlox/refs/heads/main/main.js';
 
   const fetchText = (url) =>
     new Promise((resolve, reject) => {
